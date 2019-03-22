@@ -1,0 +1,362 @@
+//Made by MamboMD
+
+// this line makes titan one scripts work on titan two
+//#include <titanone.gph>
+
+int ledgeTrapStep;
+int activate;
+int ledgeOption;
+int postGetUpOption;
+int trainMode;
+
+int FRAME_MS = 17;
+int LEDGE_OPTION_LIST_SIZE = 5;
+
+int STEP_GO_TO_LEDGE = 0;
+int STEP_GOING_TO_LEDGE = 1;
+int STEP_DO_LEDGE_OPTION = 2;
+int STEP_DOING_LEDGE_OPTION = 3;
+int STEP_DO_POST_GET_UP_OPTION = 4;
+int STEP_DOING_POST_GET_UP_OPTION = 5;
+int STEP_DO_RESET_TRAINING = 6;
+int STEP_DOING_RESET_TRAINING = 7;
+
+int GET_UP_ACTION_TIME = 10;
+int POST_GET_UP_RECOVERY_TIME_FAST = 25;
+int POST_GET_UP_RECOVERY_TIME_SLOW = 45;
+
+init {
+    activate = FALSE;
+    ledgeTrapStep = 0;
+    ledgeOption = 0;
+    postGetUpOption = 0;
+    trainMode = 5;
+}
+main {
+    // Press A to activate/deactivate script
+    if (event_press(SWITCH_A)) {
+        activate = !activate;
+    }
+    // right/left on d pad cycles get up options
+    //trainMode 0 - get up attack
+    //trainMode 1 - get up roll
+    //trainMode 2 - neutral get up
+    //trainMode 3 - get up jump
+    //trainMode 4 - dropdown jump fair
+    //trainMode 5 - random get up option
+    if (event_press(SWITCH_LEFT))
+    {
+        if (trainMode == 0)
+        {
+            trainMode = LEDGE_OPTION_LIST_SIZE;
+        }
+        else
+        {
+            trainMode = trainMode - 1;
+        }
+    }
+    else if (event_press(SWITCH_RIGHT))
+    {
+        if (trainMode == LEDGE_OPTION_LIST_SIZE)
+        {
+            trainMode = 0;
+        }
+        else
+        {
+            trainMode= trainMode + 1;
+        }
+    }
+
+    if (activate)
+    {
+        if (ledgeTrapStep == STEP_GO_TO_LEDGE)
+        {
+            combo_run(GoToLedge);
+
+            ledgeTrapStep = STEP_GOING_TO_LEDGE;
+        }
+
+        if (ledgeTrapStep == STEP_GOING_TO_LEDGE)
+        {
+            if (!combo_running(GoToLedge))
+            {
+                ledgeTrapStep = STEP_DO_LEDGE_OPTION;
+            }
+        }
+
+        if (ledgeTrapStep == STEP_DO_LEDGE_OPTION)
+        {
+            if (trainMode == LEDGE_OPTION_LIST_SIZE) {
+                ledgeOption = irand(0, 4);
+            }
+            else
+            {
+                ledgeOption = trainMode;
+            }
+
+            if (ledgeOption == 0)
+            {
+                combo_run(GetUpAttack);
+            }
+            else if (ledgeOption == 1)
+            {
+                combo_run(GetUpRoll);
+            }
+            else if (ledgeOption == 2)
+            {
+                combo_run(NeutralGetUp);
+            }
+            else if (ledgeOption == 3)
+            {
+                combo_run(JumpGetUp);
+            }
+            else if (ledgeOption == 4)
+            {
+                combo_run(DropdownJumpFair);
+            }
+
+            ledgeTrapStep = STEP_DOING_LEDGE_OPTION;
+        }
+
+        if (ledgeTrapStep == STEP_DOING_LEDGE_OPTION)
+        {
+            //I hate this API
+            if(!combo_running(GetUpAttack)
+            && !combo_running(GetUpRoll)
+            && !combo_running(NeutralGetUp)
+            && !combo_running(JumpGetUp)
+            && !combo_running(DropdownJumpFair))
+            {
+                ledgeTrapStep = STEP_DO_POST_GET_UP_OPTION;
+            }
+        }
+
+        if (ledgeTrapStep == STEP_DO_POST_GET_UP_OPTION )
+        {
+            postGetUpOption = irand(0, 4);
+            
+            if(postGetUpOption == 0)
+            {
+                combo_run(HoldShield);
+            }
+            if(postGetUpOption == 1)
+            {
+                combo_run(NairOOS);
+            }
+            if(postGetUpOption == 2)
+            {
+                combo_run(Spotdodge);
+            }
+            if(postGetUpOption == 3)
+            {
+                combo_run(GrabOOS);
+            }
+            if(postGetUpOption == 4)
+            {
+                combo_run(RollIn);
+            }
+
+            ledgeTrapStep = STEP_DOING_POST_GET_UP_OPTION;
+        }
+        
+        if(ledgeTrapStep == STEP_DOING_POST_GET_UP_OPTION)
+        {
+            //I hate this API
+            if(!combo_running(HoldShield)
+            && !combo_running(NairOOS)
+            && !combo_running(Spotdodge)
+            && !combo_running(GrabOOS)
+            && !combo_running(RollIn))
+            {
+                ledgeTrapStep = STEP_DO_RESET_TRAINING;
+            }
+        }
+
+        if (ledgeTrapStep == STEP_DO_RESET_TRAINING)
+        {
+            combo_run(ResetTrainingMode);
+
+            ledgeTrapStep = STEP_DOING_RESET_TRAINING;
+        }
+
+        if (ledgeTrapStep == STEP_DOING_RESET_TRAINING)
+        {
+            if (!combo_running(ResetTrainingMode))
+            {
+                ledgeTrapStep = STEP_GO_TO_LEDGE;
+            }
+        }
+    }
+}
+
+combo GoToLedge {
+    //run to ledge
+    set_val(SWITCH_LX, 100);
+    wait(FRAME_MS * 10);
+
+    //dropdown fastfall
+    set_val(SWITCH_LX, -100);
+    set_val(SWITCH_LY, 100);
+    wait(FRAME_MS * 4);
+
+    //stop fastfalling
+    set_val(SWITCH_LY, 0);
+    wait(FRAME_MS * 15);
+
+    //stop going towards ledge
+    set_val(SWITCH_LX, 0);
+    wait(FRAME_MS * irand(20, 100));
+}
+
+combo GetUpAttack
+{
+    set_val(SWITCH_A, 100);
+    wait(FRAME_MS * GET_UP_ACTION_TIME);
+
+    set_val(SWITCH_A, 0);
+    wait(FRAME_MS * POST_GET_UP_RECOVERY_TIME_SLOW);
+}
+
+combo GetUpRoll
+{
+    set_val(SWITCH_ZR, 100);
+    wait(FRAME_MS * GET_UP_ACTION_TIME);
+
+    set_val(SWITCH_ZR, 0);
+    wait(FRAME_MS * POST_GET_UP_RECOVERY_TIME_SLOW);
+}
+
+combo NeutralGetUp
+{
+    set_val(SWITCH_LX, -100);
+    wait(FRAME_MS * GET_UP_ACTION_TIME);
+
+    set_val(SWITCH_LX, 0);
+    wait(FRAME_MS * POST_GET_UP_RECOVERY_TIME_FAST);
+}
+
+combo JumpGetUp
+{
+    set_val(SWITCH_Y, 100);
+    set_val(SWITCH_LX, -100);
+    wait(FRAME_MS * 16);
+
+    set_val(SWITCH_Y, 0);
+    set_val(SWITCH_LX, 0);
+    set_val(SWITCH_ZR, 100);
+    wait(FRAME_MS * GET_UP_ACTION_TIME);
+
+    set_val(SWITCH_ZR, 0);
+    wait(FRAME_MS * POST_GET_UP_RECOVERY_TIME_SLOW);
+}
+
+combo DropdownJumpFair
+{
+    wait(FRAME_MS * 3);
+    set_val(SWITCH_LY, 100);
+    wait(FRAME_MS);
+    
+    set_val(SWITCH_LY, 0);
+    set_val(SWITCH_Y, 100);
+    set_val(SWITCH_A, 100);
+    set_val(SWITCH_LX, -100);
+    wait(FRAME_MS * 15);
+    
+    set_val(SWITCH_LX, 100);
+    set_val(SWITCH_LY, 100);
+    set_val(SWITCH_Y, 0);
+    set_val(SWITCH_A, 0);
+    wait(FRAME_MS * 10);
+    set_val(SWITCH_LX, 0);
+    set_val(SWITCH_LY, 0);
+    wait(FRAME_MS * 10);
+}
+
+combo HoldShield
+{
+    set_val(SWITCH_ZR, 100);
+    wait(FRAME_MS * 100);
+
+    set_val(SWITCH_ZR, 0);
+
+    //wait for shield drop frames
+    wait(FRAME_MS * POST_GET_UP_RECOVERY_TIME_FAST);
+}
+
+combo NairOOS
+{
+    set_val(SWITCH_ZR, 100);
+    wait(FRAME_MS * irand(35, 100));
+    
+    set_val(SWITCH_Y, 100);
+    set_val(SWITCH_A, 100);
+    wait(FRAME_MS * 6);
+
+    set_val(SWITCH_ZR, 0);
+    set_val(SWITCH_Y, 0);
+    set_val(SWITCH_A, 0);
+
+    //wait for shield drop frames
+    wait(FRAME_MS * POST_GET_UP_RECOVERY_TIME_FAST);
+}
+
+combo GrabOOS
+{
+    set_val(SWITCH_ZR, 100);
+    wait(FRAME_MS * irand(10, 25));
+    
+    set_val(SWITCH_R, 100);
+    wait(FRAME_MS * 6);
+
+    set_val(SWITCH_ZR, 0);
+    set_val(SWITCH_R, 0);
+
+    //wait for shield drop frames
+    wait(FRAME_MS * POST_GET_UP_RECOVERY_TIME_FAST);
+}
+
+combo Spotdodge
+{
+    set_val(SWITCH_ZR, 100);
+    wait(FRAME_MS * 25);
+    
+    set_val(SWITCH_LY, 100);
+    wait(FRAME_MS * GET_UP_ACTION_TIME);
+
+    set_val(SWITCH_ZR, 0);
+    set_val(SWITCH_LY, 0);
+
+    //wait for shield drop frames
+    wait(FRAME_MS * POST_GET_UP_RECOVERY_TIME_FAST);
+}
+
+combo RollIn
+{
+    set_val(SWITCH_ZR, 100);
+    wait(FRAME_MS * 25);
+    
+    set_val(SWITCH_LX, -100);
+    wait(FRAME_MS * GET_UP_ACTION_TIME);
+
+    set_val(SWITCH_ZR, 0);
+    set_val(SWITCH_LX, 0);
+
+    //wait for shield drop frames
+    wait(FRAME_MS * POST_GET_UP_RECOVERY_TIME_FAST);
+}
+
+combo ResetTrainingMode
+{
+    wait(FRAME_MS * 20);
+    set_val(SWITCH_R, 100);
+    set_val(SWITCH_L, 100);
+    set_val(SWITCH_A, 100);
+    wait(FRAME_MS * 20);
+
+    set_val(SWITCH_R, 0);
+    set_val(SWITCH_L, 0);
+    set_val(SWITCH_A, 0);
+
+    //wait for shield drop frames
+    wait(FRAME_MS * 100);
+}
